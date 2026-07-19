@@ -1,0 +1,4 @@
+#+TITLE: Vulpea Auto Tag
+
+
+Define rules to automatically add tags to vulpea notes before saving.
