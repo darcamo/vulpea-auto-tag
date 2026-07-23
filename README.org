@@ -1,4 +1,67 @@
 #+TITLE: Vulpea Auto Tag
 
+The =vulpea-auto-tag= package allows you to define rules for automatically adding or removing tags from Vulpea notes when saving them.
 
-Define rules to automatically add tags to vulpea notes before saving.
+* How It Works
+
+The =vulpea-auto-tag-rules= variable contains a list of functions, each responsible for a specific tagging rule. Each function should return a cons cell =(tag-to-add . tag-to-remove)=:
+
+- =tag-to-add=: The tag to add (if applicable), can also be =nil= to not add any tag.
+- =tag-to-remove=: The tag to remove (if applicable), can also be =nil= to not remove any tag.
+
+These functions are executed sequentially when =vulpea-auto-tag-sync-mode= is enabled. Tags are then updated in the note based on the output of these functions.
+
+*Tip*: Use directory variables to enable the =vulpea-auto-tag-sync-mode= minor mode in all org-mode files inside your vulpea folder.
+
+* Default behavior: The "todo" Tag
+
+By default, =vulpea-auto-tag-rules= includes the =vulpea-auto-tag-process-todo-tag= function, which manages the "todo" tag based on TODO keywords:
+
+- Returns =(cons "todo" nil)= if the note contains at least one TODO keyword (adds the "todo" tag).
+- Returns =(cons nil "todo")= if no TODO keyword is present (removes the "todo" tag).
+
+The recognition of TODO keywords is configured using the =vulpea-auto-tag-todo-re= variable.
+
+This ensures the "todo" tag is dynamically updated based on the note content.
+
+
+*Note*: If you want to take advantage of this to add notes with the "todo" tag to the org agenda, check the [[https://github.com/darcamo/vulpea-agenda][vulpea-agenda]] package.
+
+
+* Example: Automatically adding the "site" tag based on metadata
+
+Let's say you want to add a "site" tag to notes that include a "Site" metadata property. This can also be combined with Vulpea's [[https://github.com/d12frosted/vulpea/blob/master/docs/api-reference.org#schemas][schema]] functionality, enabling you to validate that notes with the "site" tag include proper "Site" metadata.
+
+Here's an example of how to achieve this:
+
+** Step 1: Define the rule
+
+Write a function that adds the "site" tag when the "Site" metadata exists:
+
+#+begin_src emacs-lisp
+(defun my-auto-tag-site ()
+  "Add the 'site' tag if the note has 'Site' metadata."
+  (when (vulpea-buffer-meta-get "Site" 'string)
+    (cons "site" nil)))
+#+end_src
+
+*Explanation*: 
+- =vulpea-buffer-meta-get= checks if the "Site" metadata exists. Here, the type ='string= is used for flexibility (e.g., the value doesn't need to be a valid link).
+- The function returns =(cons "site" nil)= to add the "site" tag if "Site" metadata exists.
+
+** Step 2: Add the rule to =vulpea-auto-tag-rules=
+
+Add your new rule to the =vulpea-auto-tag-rules= variable:
+
+#+begin_src emacs-lisp
+(add-to-list 'vulpea-auto-tag-rules #'my-auto-tag-site)
+#+end_src
+
+
+** Additional Notes
+
+- *Schema Validation*: You can define a schema for notes with the "site" tag to ensure they include valid "Site" metadata. For instance, the schema could enforce that "Site" metadata contains a valid link.
+- *Consistency*: If a note initially had "Site" metadata (and gained the "site" tag) but later the metadata is removed, the "site" tag remains. Vulpea would then flag the note as schema-invalid, prompting the user to resolve the inconsistency.
+- *Flexible Design*: The function =my-auto-tag-site= does not remove the "site" tag explicitly if the metadata condition is no longer met. This design allows schema validation to manage such inconsistencies. If you prefer to just remove the tag, modify the =my-auto-tag-site= function accordingly.
+
+With these simple configurations, you can automate tag management to simplify note organization and ensure consistency.

@@ -34,11 +34,43 @@
 ;;; Code:
 (require 'vulpea)
 
-(defconst vulpea-auto-tag-todo-re
-  "\\* \\(TODO\\|WAIT\\|CANC\\|STARTED\\|CYCLIC\\|PROJ\\|SOMEDAY\\)")
+
+;; Define the vulpea-auto-tag group
+(defgroup vulpea-auto-tag nil
+  "Automatically add/remove tags into Vulpea notes prior to saving."
+  :group 'vulpea
+  :prefix "vulpea-auto-tag-")
 
 
-(defun vulpea-auto-tag-buffer-has-todo-p ()
+(defcustom vulpea-auto-tag-rules '(vulpea-auto-tag-process-todo-tag)
+  "List of functions to adjust tags.
+
+Each function should not receive any arguments and return a cons cell
+with tags to add and remove from the note"
+  :type '(repeat (function :tag "Function"))
+  :group 'vulpea-auto-tag)
+
+
+(defcustom vulpea-auto-tag-todo-re
+  "\\* \\(TODO\\|WAIT\\|CANC\\|STARTED\\|CYCLIC\\|PROJ\\|SOMEDAY\\)"
+  "Regular expression to match TODO keywords in the current buffer."
+  :type 'regexp
+  :group 'vulpea-auto-tag)
+
+
+(defun vulpea-auto-tag-process-todo-tag ()
+  "Return a cons cell with tags to add/remove.
+
+If the there are any TODOs in the current buffer, return a cons cell
+with \"todo\" as the car, and nil as cdr. If there aren't any TODO
+entries, return the oposit, with nil as car and \"todo\" as cdr. This
+function is intended to be used in `vulpea-auto-tag-rules'."
+  (if (vulpea-auto-tag--buffer-has-todo-p)
+      '(("todo") . nil)
+    '(nil . ("todo"))))
+
+
+(defun vulpea-auto-tag--buffer-has-todo-p ()
   "Return non-nil if current buffer has any todo entry.
 
 Only TODO keywords in `vulpea-auto-tag-todo-re' are considered, which
@@ -52,20 +84,20 @@ tasks."
 
 
 (defun vulpea-auto-tag--before-save ()
-  "Function to be added to `before-save-hook'.
-
-If the current buffer has any TODO entry, add the tag \"todo\" to the
-note. Otherwise, remove the tag \"todo\" from the note."
+  "Process the functions in `vulpea-auto-tag-rules' to add/remove tags."
   (when (and (buffer-file-name)
              (string= (file-name-extension (buffer-file-name)) "org"))
-    (save-excursion
-      ;; Move to buffer start to make sure we add/remove file tags
-      (goto-char (point-min))
-      (if (vulpea-auto-tag-buffer-has-todo-p)
-          (vulpea-buffer-tags-add "todo")
-        (let ((tags (vulpea-buffer-tags-get)))
-          (when (member "todo" tags)
-            (vulpea-buffer-tags-remove "todo")))))))
+    (dolist (fn vulpea-auto-tag-rules)
+      (let* ((tags-cons (funcall fn))
+             (tags-to-add (car tags-cons))
+             (tags-to-remove (cdr tags-cons)))
+        (save-excursion
+          ;; Move to buffer start to make sure we add/remove file tags
+          (goto-char (point-min))
+          (when tags-to-add
+            (vulpea-buffer-tags-add tags-to-add))
+          (when tags-to-remove
+            (vulpea-buffer-tags-remove tags-to-remove)))))))
 
 
 (define-minor-mode vulpea-auto-tag-sync-mode
