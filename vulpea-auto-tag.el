@@ -52,7 +52,7 @@ with tags to add and remove from the note"
 
 
 (defcustom vulpea-auto-tag-todo-re
-  "\\* \\(TODO\\|WAIT\\|CANC\\|STARTED\\|CYCLIC\\|PROJ\\|SOMEDAY\\)"
+  "\\* \\(TODO\\|WAIT\\|STARTED\\|CYCLIC\\|PROJ\\|SOMEDAY\\)"
   "Regular expression to match TODO keywords in the current buffer."
   :type 'regexp
   :group 'vulpea-auto-tag)
