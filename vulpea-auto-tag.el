@@ -57,6 +57,11 @@ with tags to add and remove from the note"
   :type 'regexp
   :group 'vulpea-auto-tag)
 
+(defcustom vulpea-auto-tag-todo-tag
+  "todo"
+  "Tag which gets added to notes with TODO entries. Set to `nil` to disable."
+  :type 'string
+  :group 'vulpea-auto-tag)
 
 (defun vulpea-auto-tag-process-todo-tag ()
   "Return a cons cell with tags to add/remove.
@@ -65,9 +70,9 @@ If the there are any TODOs in the current buffer, return a cons cell
 with \"todo\" as the car, and nil as cdr. If there aren't any TODO
 entries, return the oposit, with nil as car and \"todo\" as cdr. This
 function is intended to be used in `vulpea-auto-tag-rules'."
-  (if (vulpea-auto-tag--buffer-has-todo-p)
-      '(("todo") . nil)
-    '(nil . ("todo"))))
+  (if (and vulpea-auto-tag-todo-tag (vulpea-auto-tag--buffer-has-todo-p))
+      `((,vulpea-auto-tag-todo-tag) . nil)
+    `(nil . (,vulpea-auto-tag-todo-tag))))
 
 
 (defun vulpea-auto-tag--buffer-has-todo-p ()
